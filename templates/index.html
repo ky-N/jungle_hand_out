@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>SW정글 | 나홀로 메모장 VER2.0</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+              integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+              crossorigin="anonymous">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+            integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+            crossorigin="anonymous"></script>
+    <script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+
+    <link href="https://fonts.googleapis.com/css?family=Stylish&display=swap" rel="stylesheet">
+</head>
+<style>
+    *{
+        font-family: "Stylish", sans-serif;
+    }
+
+    .wrap{
+        width: 800px;
+        margin: auto;
+    }
+
+    .card_Title{
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+</style>
+<script>
+    $(document).ready(function(){
+        $("#cards-box").html("");
+        showMemo();
+    });
+    function postMemo() {
+        let post_Title = $("input#post_Title").val()
+        let post_Body = $("#post_Body").val()
+        console.log({"post_Ttile":post_Title,"post_Body":post_Body})
+        $.ajax({
+            type: "POST",
+            url: "/post",
+            data: {post_Title: post_Title, post_Body: post_Body},
+            success: function (response) { // 성공하면
+                if (response["result"] == "success") {
+                    alert("저장완료했습니다.");
+                    window.location.reload();
+                } else {
+                    alert("서버 오류가 발생했습니다.")
+                }
+            }
+        })
+    }
+
+    function showMemo(){
+        $.ajax({
+            type: "GET",
+            url: "/post",
+            data: {},
+            success: function(response){
+                let posts = response["post"];
+                console.log("테스트중입니다.")
+                console.log(posts);
+                console.log(posts[0])
+                for(let i = 0; i < posts.length; i++){
+                    let post = posts[i]
+                    let post_Title = post['post_Title']
+                    let post_Body = post['post_Body']
+                    let post_Id = i
+                    makeCard(posts[i]["post_Title"],posts[i]["post_Body"],i)
+                }
+            }
+        })
+    }
+
+    function makeCard(post_Title,post_Body,post_Id){
+        let tempHtml = `<div class = "card">
+                            <div class = "card_CSS">
+                                <div id="origin+${post_Id}" style="display: block">
+                                    <p class = "card_Title">${post_Title}</p>
+                                    <p class = "card_Body">${post_Body}</p>
+                                    <input type="button" class="btn btn-primary" value="수정하기" onclick="showHiddenMemo('${post_Id}')">
+                                    <input type="button" class="btn btn-primary" value="삭제하기" onclick="deleteMemo('${post_Title}')">
+                                </div>
+                                <div id="hidden+${post_Id}" style="display: none">
+                                    <input type="text" id="post_U_Title+${post_Id}" value="${post_Title}">
+                                    <br>
+                                    <br>
+                                    <textarea id="post_U_Body+${post_Id}" rows="6">${post_Body}</textarea>
+                                    <input type="button" class="btn btn-primary" value="수정하기" onclick="updateMemo('${post_Title}','${post_Body}','${post_Id}')">
+                                </div>
+                            </div>
+                        </div>
+`;
+        $("#cards-box").append(tempHtml)
+    }
+
+    function showHiddenMemo(post_Id){
+        console.log("test")
+        let originId = "origin+"+post_Id
+        let hiddenId = "hidden+"+post_Id
+        let origin = document.getElementById(originId)
+        let hidden = document.getElementById(hiddenId)
+        if(origin.style.display=="block"){
+            origin.style.display = "none";
+            hidden.style.display = "block"
+        }
+    }
+
+    function updateMemo(post_Title,post_Body,post_Id){
+        let key_Title = "post_U_Title+"+post_Id
+        let key_Body = "post_U_Body+"+post_Id
+        console.log(key_Title,key_Body,post_Id)
+        let post_U_Title = document.getElementById(key_Title).value;
+        let post_U_Body = document.getElementById(key_Body).value;
+        console.log(post_U_Title,post_U_Body)
+        $.ajax({
+            type: "POST",
+            url: "/post/update",
+            data: {"post_U_Title": post_U_Title, "post_U_Body": post_U_Body, "post_Title": post_Title,"post_Body": post_Body},
+            success: function(response){
+                if(response['result'] == 'success'){
+                    alert("수정완료")
+                    window.location.reload()
+                }
+            }
+        })
+    }
+
+    function deleteMemo(post_Title){
+        console.log(post_Title)
+        $.ajax({
+            type: "POST",
+            url: "/post/delete",
+            data: {"post_Title": post_Title},
+            success: function(response){
+                if(response['result'] == 'success'){
+                    alert("삭제 완료!")
+                    window.location.reload()
+                }
+            }
+        })
+
+    }
+
+</script>
+<body>
+<div class="wrap">
+    <div class="jumbotron">
+        <h1 class="display-4">나홀로 링크 메모장 ver2.0</h1>
+        <div id="post-box" class="form-post">
+            <div>
+                <div class="form-group">
+                    <input type="text" id="post_Title" class="form-control" placeholder="제목을 입력해주세요."
+                </div>
+                <br>
+                <div class="form-group">
+                    <textarea id="post_Body" class="form-control" placeholder="내용을 입력하세요."  rows="6"></textarea>
+                </div>
+                <input type="button" class="btn btn-primary" value="저장하기" onclick="postMemo()">
+            </div>
+        </div>
+    </div>
+    <div id="cards-box" class="card-columns">
+
+    </div>
+</div>
+</body>
+</html>
